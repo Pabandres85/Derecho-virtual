@@ -99,7 +99,7 @@ const Chat = () => {
     const apiKey = localStorage.getItem('llm_api_key');
     const provider = localStorage.getItem('llm_provider') || 'openai';
 
-    if (!apiKey) {
+    if (provider !== 'lmstudio' && !apiKey) {
       toast({
         title: 'API Key Requerida',
         description: 'Por favor configura tu API key en los ajustes.',
@@ -157,6 +157,28 @@ const Chat = () => {
           localStorage.setItem('llm_api_error', 'La API Key de Gemini no es válida.');
         }
         responseContent = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      } else if (provider === 'lmstudio') {
+        const lmstudioMessages = [
+          { role: 'system', content: systemPrompt },
+          ...messages.map(msg => ({ role: msg.role, content: msg.content })),
+          { role: 'user', content: userMessage }
+        ];
+
+        response = await fetch('http://192.168.10.12:1234/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'mistral-7b-instruct-v0.1', // Modelo de LM Studio
+            messages: lmstudioMessages,
+            max_tokens: 1000,
+          }),
+        });
+
+        const data = await response.json();
+        // LM Studio no suele requerir una API Key, por lo que el manejo de errores es diferente
+        responseContent = data.choices?.[0]?.message?.content;
       }
 
       if (!response?.ok || !responseContent) throw new Error();

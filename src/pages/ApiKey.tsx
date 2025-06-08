@@ -43,7 +43,7 @@ const ApiKey = () => {
   }, [navigate, toast]);
 
   const handleSave = () => {
-    if (!apiKey.trim()) {
+    if (!apiKey.trim() && provider !== 'lmstudio') {
       toast({
         title: "Error",
         description: "Por favor ingresa una API key válida",
@@ -102,26 +102,32 @@ const ApiKey = () => {
                 <SelectContent className="bg-white/90 backdrop-blur-lg">
                   <SelectItem value="openai">OpenAI (GPT-4)</SelectItem>
                   <SelectItem value="gemini">Google Gemini</SelectItem>
+                  <SelectItem value="lmstudio">LM Studio (Servidor Local)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="apikey" className="text-gray-800">API Key</Label>
-              <Input
-                id="apikey"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={provider === 'openai' ? 'sk-...' : 'AI...'}
-                className="bg-white/50 backdrop-blur-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-              />
-              <p className="text-sm text-gray-600">
-                {provider === 'openai'
-                  ? 'Obtén tu clave API de OpenAI en platform.openai.com'
-                  : 'Obtén tu clave API de Gemini en makersuite.google.com'}
-              </p>
-            </div>
+            {provider !== 'lmstudio' && (
+              <div className="space-y-2">
+                <Label htmlFor="apikey" className="text-gray-800">API Key</Label>
+                <Input
+                  id="apikey"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={provider === 'openai' ? 'sk-...' : provider === 'gemini' ? 'AI...' : 'No requerida o cualquier valor'}
+                  className="bg-white/50 backdrop-blur-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                />
+                <p className="text-sm text-gray-600">
+                  {provider === 'openai' 
+                    ? 'Obtén tu clave API de OpenAI en platform.openai.com'
+                    : provider === 'gemini' 
+                    ? 'Obtén tu clave API de Gemini en makersuite.google.com'
+                    : 'Si LM Studio no requiere una clave, puedes ingresar cualquier valor o dejarlo vacío.'
+                  }
+                </p>
+              </div>
+            )}
 
             <div className="flex justify-between gap-4">
               <Button

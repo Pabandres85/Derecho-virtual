@@ -9,19 +9,20 @@ Este proyecto es una plataforma web desarrollada con Vite, React, TypeScript y S
 * **Frontend**: React + Vite + TypeScript
 * **UI Framework**: shadcn/ui con Tailwind CSS
 * **Backend**: Supabase (PostgreSQL + Auth + Storage)
-* **IA**: OpenAI GPT-4.1 o Google Gemini 1.5-pro (por clave API)
+* **IA**: OpenAI GPT-4.1, Google Gemini 1.5-pro (por clave API), o LM Studio (servidor local)
 
 ---
 
 ## 🔄 Características implementadas
 
-* ✉️ Registro e inicio de sesión con Supabase Auth
+* ✉️ Registro e inicio de sesión con Supabase Auth con diseño mejorado
 * 📅 Historial de mensajes por usuario guardado en la tabla `messages`
-* 🧰 Interfaz de chat completa con timestamps, scroll y entrada
-* 🔐 Configuración de proveedor IA (OpenAI o Gemini) con almacenamiento seguro en `localStorage`
+* 🧰 Interfaz de chat completa con diseño moderno, animaciones y soporte para LM Studio (servidor local)
+* 🔐 Configuración de proveedor IA (OpenAI, Gemini o LM Studio) con almacenamiento seguro en `localStorage` y manejo inteligente de la API Key
 * 🚪 Cierre de sesión y limpieza de almacenamiento local
 * 🌟 Prompt del sistema ajustado para consultas legales
 * 🔎 Navegación limpia con `react-router-dom`
+* 🎨 Diseño y experiencia de usuario (UI/UX) mejorados en las páginas de login, signup, chat y configuración de API Key
 * 🔧 Estructura modular y escalable con `src/components`, `src/pages`, `src/hooks`, etc.
 
 ---
@@ -113,9 +114,11 @@ create policy "Users can select their messages"
 ## 📊 Uso
 
 1. Regístrate con email y contraseña.
-2. Ingresa tu clave API en la sección "API Key".
-3. Escoge proveedor: `OpenAI` o `Google Gemini`
-4. Realiza tus preguntas legales y revisa el historial
+2. Ve a la sección "API Key" para configurar tu proveedor de IA.
+3. Escoge tu proveedor preferido: `OpenAI`, `Google Gemini`, o `LM Studio (Servidor Local)`.
+   *   Para `OpenAI` o `Google Gemini`, introduce tu clave API. Si seleccionas `LM Studio`, el campo de la clave API se ocultará ya que no es necesaria.
+4. Haz clic en "Guardar Clave".
+5. Vuelve al chat y realiza tus preguntas legales. El historial de mensajes se guardará automáticamente.
 
 ---
 
