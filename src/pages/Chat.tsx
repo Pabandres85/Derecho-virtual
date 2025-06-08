@@ -28,7 +28,6 @@ const Chat = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check authentication
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -41,7 +40,6 @@ const Chat = () => {
 
     checkAuth();
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!session) {
@@ -71,21 +69,17 @@ const Chat = () => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      
+
       const typedMessages: Message[] = (data || []).map(msg => ({
         id: msg.id,
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
         created_at: msg.created_at,
       }));
-      
+
       setMessages(typedMessages);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load messages",
-        variant: "destructive",
-      });
+      toast({ title: 'Error', description: 'Failed to load messages', variant: 'destructive' });
     }
   };
 
@@ -93,11 +87,7 @@ const Chat = () => {
     try {
       const { error } = await supabase
         .from('messages')
-        .insert({
-          user_id: user?.id,
-          role,
-          content,
-        });
+        .insert({ user_id: user?.id, role, content });
 
       if (error) throw error;
     } catch (error: any) {
@@ -108,24 +98,25 @@ const Chat = () => {
   const callLLM = async (userMessage: string) => {
     const apiKey = localStorage.getItem('llm_api_key');
     const provider = localStorage.getItem('llm_provider') || 'openai';
-    
+
     if (!apiKey) {
       toast({
-        title: "API Key Required",
-        description: "Please set your API key in the settings first",
-        variant: "destructive",
+        title: 'API Key Requerida',
+        description: 'Por favor configura tu API key en los ajustes.',
+        variant: 'destructive',
       });
       navigate('/api-key');
       return;
     }
 
+    const systemPrompt = 'You are LexIA, a legal assistant specialized in Spanish and European law. Always answer clearly and cite legal norms or case law when relevant.';
+
     try {
-      const systemPrompt = "You are LexIA, a legal assistant specialized in Spanish and European law. Always answer clearly and cite legal norms or case law when relevant.";
-      
       let response;
-      
+      let responseContent;
+
       if (provider === 'openai') {
-        const conversationMessages = [
+        const openaiMessages = [
           { role: 'system', content: systemPrompt },
           ...messages.map(msg => ({ role: msg.role, content: msg.content })),
           { role: 'user', content: userMessage }
@@ -137,70 +128,57 @@ const Chat = () => {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: conversationMessages,
-            max_tokens: 1000,
-          }),
+          body: JSON.stringify({ model: 'gpt-4o', messages: openaiMessages, max_tokens: 1000 }),
         });
+
+        const data = await response.json();
+        if (data?.error?.code === 'insufficient_quota') {
+          localStorage.setItem('llm_api_error', 'Tu API Key de OpenAI no tiene créditos disponibles.');
+        } else if (data?.error?.code === 'invalid_api_key') {
+          localStorage.setItem('llm_api_error', 'La API Key de OpenAI no es válida.');
+        }
+
+        responseContent = data.choices?.[0]?.message?.content;
       } else if (provider === 'gemini') {
+        const geminiMessages = messages.map(msg => ({ role: msg.role, parts: [{ text: msg.content }] }));
+
         response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [
-              ...messages.map(msg => ({
-                role: msg.role,
-                parts: [{ text: msg.content }]
-              })),
-              { role: 'user', parts: [{ text: userMessage }] }
-            ],
-            systemInstruction: {
-              role: 'system',
-              parts: [{ text: systemPrompt }]
-            },
-            generationConfig: {
-              maxOutputTokens: 1000,
-              temperature: 0.4
-            }
+            contents: [...geminiMessages, { role: 'user', parts: [{ text: userMessage }] }],
+            systemInstruction: { role: 'system', parts: [{ text: systemPrompt }] },
+            generationConfig: { maxOutputTokens: 1000, temperature: 0.4 }
           }),
         });
+
+        const data = await response.json();
+        if (data?.error?.code === 'API_KEY_INVALID') {
+          localStorage.setItem('llm_api_error', 'La API Key de Gemini no es válida.');
+        }
+        responseContent = data?.candidates?.[0]?.content?.parts?.[0]?.text;
       }
 
-      if (!response?.ok) {
-        throw new Error('Failed to get response from LLM');
-      }
-
-      const data = await response.json();
-      
-      let responseContent;
-      if (provider === 'openai') {
-        responseContent = data.choices[0].message.content;
-      } else if (provider === 'gemini') {
-        responseContent = data.candidates[0].content.parts[0].text;
-      }
-      
+      if (!response?.ok || !responseContent) throw new Error();
       return responseContent;
-    } catch (error: any) {
+
+    } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to get AI response. Please check your API key.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Error al obtener respuesta de la IA. Revisa tu clave y proveedor.',
+        variant: 'destructive',
       });
+      localStorage.setItem('llm_last_error', 'Error al obtener respuesta de la IA. Verifica si tu API key ha caducado o si tu cuenta tiene saldo.');
       return null;
     }
   };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !user) return;
-
     const userMessage = inputMessage.trim();
     setInputMessage('');
     setLoading(true);
 
-    // Add user message to UI and save to database
     const newUserMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -210,9 +188,7 @@ const Chat = () => {
     setMessages(prev => [...prev, newUserMessage]);
     await saveMessage('user', userMessage);
 
-    // Get AI response
     const aiResponse = await callLLM(userMessage);
-    
     if (aiResponse) {
       const newAiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -234,36 +210,21 @@ const Chat = () => {
     }
   };
 
-  const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const formatTime = (timestamp: string) =>
+    new Date(timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
-      toast({
-        title: "Sesión cerrada",
-        description: "Has cerrado sesión exitosamente",
-      });
-      
+      toast({ title: 'Sesión cerrada', description: 'Has cerrado sesión exitosamente' });
       navigate('/login');
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Error al cerrar sesión",
-        variant: "destructive",
-      });
+      toast({ title: 'Error', description: 'Error al cerrar sesión', variant: 'destructive' });
     }
   };
 
-  if (!user) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  }
+  if (!user) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -276,32 +237,20 @@ const Chat = () => {
                 LexIA Chat
               </CardTitle>
               <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate('/api-key')}
-                  className="hover:bg-gray-100"
-                >
+                <Button variant="ghost" size="icon" onClick={() => navigate('/api-key')} className="hover:bg-gray-100">
                   <Settings className="h-5 w-5" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleLogout}
-                  className="hover:bg-gray-100"
-                >
+                <Button variant="ghost" size="icon" onClick={handleLogout} className="hover:bg-gray-100">
                   <LogOut className="h-5 w-5" />
                 </Button>
               </div>
             </div>
           </CardHeader>
+
           <CardContent className="p-0">
-            <ScrollArea
-              ref={scrollAreaRef}
-              className="h-[calc(100vh-280px)] p-4"
-            >
+            <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-280px)] p-4">
               <AnimatePresence>
-                {messages.map((message, index) => (
+                {messages.map((message) => (
                   <motion.div
                     key={message.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -310,29 +259,15 @@ const Chat = () => {
                     transition={{ duration: 0.3 }}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
                   >
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                        message.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      <div className="text-sm mb-1">
-                        {message.role === 'user' ? 'Tú' : 'LexIA'}
-                      </div>
+                    <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}>
+                      <div className="text-sm mb-1">{message.role === 'user' ? 'Tú' : 'LexIA'}</div>
                       <div className="whitespace-pre-wrap">{message.content}</div>
-                      <div className="text-xs mt-1 opacity-70">
-                        {formatTime(message.created_at)}
-                      </div>
+                      <div className="text-xs mt-1 opacity-70">{formatTime(message.created_at)}</div>
                     </div>
                   </motion.div>
                 ))}
                 {loading && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex justify-start mb-4"
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start mb-4">
                     <div className="bg-gray-100 rounded-2xl px-4 py-2">
                       <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
                     </div>
@@ -340,6 +275,7 @@ const Chat = () => {
                 )}
               </AnimatePresence>
             </ScrollArea>
+
             <div className="p-4 border-t border-gray-200/50">
               <div className="flex gap-2">
                 <Input

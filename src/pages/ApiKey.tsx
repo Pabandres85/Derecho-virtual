@@ -16,7 +16,6 @@ const ApiKey = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check authentication
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -24,26 +23,30 @@ const ApiKey = () => {
         return;
       }
     };
-
     checkAuth();
 
-    // Load saved settings
+    // Load saved API key and provider from localStorage
     const savedKey = localStorage.getItem('llm_api_key');
     const savedProvider = localStorage.getItem('llm_provider');
-    
-    if (savedKey) {
-      setApiKey(savedKey);
+    if (savedKey) setApiKey(savedKey);
+    if (savedProvider) setProvider(savedProvider);
+
+    // Mostrar último error si existe
+    const lastError = localStorage.getItem('llm_last_error');
+    if (lastError) {
+      toast({
+        title: 'Error detectado',
+        description: lastError,
+        variant: 'destructive',
+      });
     }
-    if (savedProvider) {
-      setProvider(savedProvider);
-    }
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleSave = () => {
     if (!apiKey.trim()) {
       toast({
         title: "Error",
-        description: "Please enter a valid API key",
+        description: "Por favor ingresa una API key válida",
         variant: "destructive",
       });
       return;
@@ -51,31 +54,33 @@ const ApiKey = () => {
 
     localStorage.setItem('llm_api_key', apiKey);
     localStorage.setItem('llm_provider', provider);
-    
+    localStorage.removeItem('llm_last_error'); // Limpiar errores anteriores
+
     toast({
-      title: "Success",
-      description: "API key saved successfully!",
+      title: "Éxito",
+      description: "API key guardada correctamente",
     });
-    
+
     navigate('/chat');
   };
 
   const handleClear = () => {
     localStorage.removeItem('llm_api_key');
     localStorage.removeItem('llm_provider');
+    localStorage.removeItem('llm_last_error');
     setApiKey('');
     setProvider('openai');
-    
+
     toast({
-      title: "Success",
-      description: "API key cleared",
+      title: "Éxito",
+      description: "API key eliminada",
     });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <Navbar />
-      
+
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         <Card className="bg-white/80 backdrop-blur-lg shadow-xl border-0">
           <CardHeader className="border-b border-gray-200/50">
@@ -86,6 +91,7 @@ const ApiKey = () => {
               Configura tu proveedor de IA y clave API. Tu clave se almacena localmente en tu navegador y nunca se envía a nuestros servidores.
             </CardDescription>
           </CardHeader>
+
           <CardContent className="space-y-6 pt-6">
             <div className="space-y-2">
               <Label htmlFor="provider" className="text-gray-800">Proveedor de IA</Label>
@@ -99,7 +105,7 @@ const ApiKey = () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="apikey" className="text-gray-800">API Key</Label>
               <Input
@@ -111,22 +117,32 @@ const ApiKey = () => {
                 className="bg-white/50 backdrop-blur-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
               />
               <p className="text-sm text-gray-600">
-                {provider === 'openai' 
+                {provider === 'openai'
                   ? 'Obtén tu clave API de OpenAI en platform.openai.com'
-                  : 'Obtén tu clave API de Gemini en makersuite.google.com'
-                }
+                  : 'Obtén tu clave API de Gemini en makersuite.google.com'}
               </p>
             </div>
-            
+
             <div className="flex justify-between gap-4">
-              <Button variant="outline" onClick={handleClear} className="w-full bg-red-50 hover:bg-red-100 text-red-600 border-red-200">
+              <Button
+                variant="outline"
+                onClick={handleClear}
+                className="w-full bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+              >
                 Limpiar Clave
               </Button>
               <div className="flex space-x-2 w-full justify-end">
-                <Button variant="outline" onClick={() => navigate('/chat')} className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/chat')}
+                  className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
+                >
                   Cancelar
                 </Button>
-                <Button onClick={handleSave} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                <Button
+                  onClick={handleSave}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
                   Guardar Clave
                 </Button>
               </div>
@@ -139,4 +155,3 @@ const ApiKey = () => {
 };
 
 export default ApiKey;
-

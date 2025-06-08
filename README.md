@@ -49,6 +49,38 @@ npm run dev
 
 ---
 
+## 🐳 Docker
+
+Para compilar y ejecutar el proyecto usando Docker, no necesitas tener Node.js ni npm instalados localmente. Docker se encargará de gestionar el entorno de compilación y ejecución.
+
+### Requisitos previos de Docker
+
+* Docker Desktop (o Docker Engine) instalado y funcionando.
+
+### Construcción de la imagen Docker
+
+Para construir la imagen de Docker, navega a la raíz del proyecto (donde se encuentra el `Dockerfile`) y ejecuta el siguiente comando:
+
+```bash
+docker build -t derecho-virtual .
+```
+
+Este comando creará una imagen Docker llamada `derecho-virtual` que contiene la aplicación compilada y un servidor Nginx configurado para servirla.
+
+### Ejecución del contenedor Docker
+
+Una vez que la imagen ha sido construida, puedes ejecutar la aplicación en un contenedor Docker utilizando el siguiente comando:
+
+```bash
+docker run -p 80:80 derecho-virtual
+```
+
+Esto mapeará el puerto 80 del contenedor al puerto 80 de tu máquina local, permitiéndote acceder a la aplicación desde tu navegador web en `http://localhost:80` (o la dirección IP de tu máquina si estás en un entorno diferente).
+
+El contenedor usará la configuración de Nginx (`nginx.conf`) y servirá los archivos estáticos de la aplicación.
+
+---
+
 ## 🔢 Configuración de Supabase
 
 ### Tabla `messages`
